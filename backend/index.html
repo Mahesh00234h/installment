@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tuition Escrow - Aptos Devnet demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-1: #0f172a;
+            --bg-2: #0b1220;
+            --brand: #3b82f6;
+            --brand-2: #22d3ee;
+            --ok: #22c55e;
+            --err: #ef4444;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --card-bg: rgba(17, 24, 39, 0.6);
+            --border: rgba(148,163,184,0.2);
+            --radius: 14px;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            color: var(--text);
+            background: radial-gradient(1200px 800px at 10% 0%, rgba(59,130,246,0.15), transparent 60%),
+                        radial-gradient(1000px 700px at 90% 20%, rgba(34,211,238,0.12), transparent 60%),
+                        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+            background-attachment: fixed;
+            padding: 32px 20px 60px;
+        }
+        .app {
+            max-width: 980px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: 0.3px;
+            background: linear-gradient(90deg, var(--brand), var(--brand-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .header h2 {
+            margin: 6px 0 0 0;
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 900px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+            .grid .card.span-2 { grid-column: span 2; }
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            backdrop-filter: blur(8px);
+            transform: translateY(8px);
+            opacity: 0;
+            animation: riseIn 0.6s ease forwards;
+        }
+        @keyframes riseIn {
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .card h3 {
+            margin: 0 0 14px 0;
+            font-size: 16px;
+            color: #e2e8f0;
+        }
+        .row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+        .row > div { flex: 1; }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(2,6,23,0.5);
+            color: var(--text);
+            transition: border-color 180ms ease, box-shadow 180ms ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: rgba(59,130,246,0.7);
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+        }
+        button {
+            background: linear-gradient(90deg, var(--brand), var(--brand-2));
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 120ms ease, filter 200ms ease, box-shadow 200ms ease;
+            box-shadow: 0 6px 18px rgba(59,130,246,0.25);
+        }
+        button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+        button:active { transform: translateY(0); filter: brightness(0.98); }
+        button.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #cbd5e1;
+            box-shadow: none;
+        }
+        button.loading { position: relative; pointer-events: none; opacity: 0.8; }
+        button.loading::after {
+            content: "";
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.6); border-top-color: white; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: rgba(2,6,23,0.6);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid var(--border);
+        }
+        .small { font-size: 12px; color: var(--muted); }
+        .success { color: var(--ok); }
+        .error { color: var(--err); }
+        .muted { color: var(--muted); }
+        .tx-link { color: #93c5fd; text-decoration: none; border-bottom: 1px dashed rgba(147,197,253,0.5); }
+        .tx-link:hover { color: white; border-bottom-color: white; }
+        /* Toasts */
+        #toasts { position: fixed; top: 18px; right: 18px; display: flex; flex-direction: column; gap: 10px; z-index: 50; }
+        .toast {
+            min-width: 260px; max-width: 420px; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(2,6,23,0.85); color: var(--text);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35); transform: translateX(16px); opacity: 0;
+            animation: toastIn 220ms ease forwards;
+        }
+        .toast.ok { border-color: rgba(34,197,94,0.4); }
+        .toast.err { border-color: rgba(239,68,68,0.4); }
+        @keyframes toastIn { to { transform: translateX(0); opacity: 1; } }
+        .toast .title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+        .toast .body { font-size: 12px; color: #cbd5e1; }
+        .toast .row { margin: 6px 0 0 0; }
+    </style>
+</head>
+<body>
+    <div class="app">
+    <div class="header">
+        <h1>Tuition Escrow</h1>
+        <h2>Aptos Devnet demo</h2>
+    </div>
+
+    <div class="grid">
+    <div class="card span-2">
+        <h3>Backend Status</h3>
+        <div id="health_out" class="mono small">Checking health…</div>
+    </div>
+
+    <div class="card">
+        <h3>Create agreement</h3>
+        <div class="row">
+            <div>
+                <label>Total amount (octas)</label>
+                <input id="total_amount" type="number" min="1" value="6000000" />
+                <div class="small">1 APT = 100,000,000 octas</div>
+            </div>
+            <div>
+                <label>Number of installments</label>
+                <input id="num_installments" type="number" min="1" value="6" />
+            </div>
+        </div>
+        <div class="row">
+            <div>
+                <label>Installment amount (octas)</label>
+                <input id="installment_amount" type="number" min="1" value="1000000" />
+            </div>
+            <div>
+                <label>Interval (days)</label>
+                <input id="interval_days" type="number" min="1" value="7" />
+            </div>
+        </div>
+        <div class="row">
+            <div>
+                <label>Penalty rate (basis points)</label>
+                <input id="penalty_rate" type="number" min="0" value="200" />
+                <div class="small">100 = 1%, 200 = 2% per day</div>
+            </div>
+            <div>
+                <label>Grace period (days)</label>
+                <input id="grace_period_days" type="number" min="0" value="1" />
+            </div>
+        </div>
+        <button id="create_btn">Create</button>
+        <div id="create_out" class="mono small"></div>
+    </div>
+
+    <div class="card">
+        <h3>Pay next installment</h3>
+        <label>Agreement ID</label>
+        <div class="row">
+            <div>
+                <input id="agreement_id" type="text" min="0" />
+            </div>
+            <div style="align-self: end;">
+                <button id="latest_btn" type="button" class="secondary">Use latest</button>
+                <button id="pay_btn">Pay</button>
+            </div>
+        </div>
+        <div id="pay_out" class="mono small"></div>
+    </div>
+    </div>
+
+    <div id="toasts"></div>
+
+    <script>
+        const api = 'http://127.0.0.1:8000';
+
+        // Toasts
+        function showToast(kind, title, body, link) {
+            const wrap = document.createElement('div');
+            wrap.className = `toast ${kind}`;
+            wrap.innerHTML = `<div class="title">${title}</div><div class="body">${body || ''}${link ? `\n<a class=\"tx-link\" target=\"_blank\" href=\"${link}\">View on Explorer</a>` : ''}</div>`;
+            document.getElementById('toasts').appendChild(wrap);
+            setTimeout(() => {
+                wrap.style.transition = 'opacity 250ms ease, transform 250ms ease';
+                wrap.style.opacity = '0';
+                wrap.style.transform = 'translateX(16px)';
+                setTimeout(() => wrap.remove(), 260);
+            }, 5200);
+        }
+
+        // Button loading helper
+        function setLoading(btn, loading) {
+            if (!btn) return;
+            if (loading) {
+                btn.classList.add('loading');
+                btn.setAttribute('disabled', 'true');
+            } else {
+                btn.classList.remove('loading');
+                btn.removeAttribute('disabled');
+            }
+        }
+
+        // Health check
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${api}/api/health`);
+                const data = await response.json();
+                document.getElementById('health_out').textContent = `Backend OK → ${data.message}`;
+            } catch (error) {
+                document.getElementById('health_out').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        checkHealth();
+
+        // Create agreement
+        document.getElementById('create_btn').addEventListener('click', async () => {
+            const body = {
+                total_amount: Number(document.getElementById('total_amount').value),
+                num_installments: Number(document.getElementById('num_installments').value),
+                installment_amount: Number(document.getElementById('installment_amount').value),
+                interval_days: Number(document.getElementById('interval_days').value),
+                penalty_rate: Number(document.getElementById('penalty_rate').value),
+                grace_period_days: Number(document.getElementById('grace_period_days').value),
+            };
+            
+            const btn = document.getElementById('create_btn');
+            setLoading(btn, true);
+            try {
+                const response = await fetch(`${api}/api/agreements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    let extra = '';
+                    if (res.agreement_id !== null && res.agreement_id !== undefined) {
+                        document.getElementById('agreement_id').value = String(res.agreement_id);
+                        extra = `\nAgreement ID: ${res.agreement_id}`;
+                    }
+                    const link = `https://explorer.aptoslabs.com/txn/${res.transaction_hash}?network=devnet`;
+                    document.getElementById('create_out').textContent = `Success: ${res.message}\nTransaction: ${res.transaction_hash}${extra}`;
+                    document.getElementById('create_out').className = 'mono small success';
+                    showToast('ok', 'Agreement created', `ID ${res.agreement_id ?? ''}`.trim(), link);
+                } else {
+                    document.getElementById('create_out').textContent = `Error: ${res.detail || res.message}`;
+                    document.getElementById('create_out').className = 'mono small error';
+                    showToast('err', 'Create failed', res.detail || res.message);
+                }
+            } catch (error) {
+                document.getElementById('create_out').textContent = `Error: ${error.message}`;
+                document.getElementById('create_out').className = 'mono small error';
+                showToast('err', 'Create failed', error.message);
+            } finally {
+                setLoading(btn, false);
+            }
+        });
+
+        // Use latest agreement id (next_id - 1)
+        document.getElementById('latest_btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${api}/api/agreements/next_id`);
+                const res = await response.json();
+                if (typeof res.next_id === 'number') {
+                    const latestId = Math.max(0, res.next_id - 1);
+                    document.getElementById('agreement_id').value = String(latestId);
+                    document.getElementById('pay_out').textContent = `Using latest agreement id: ${latestId}`;
+                    document.getElementById('pay_out').className = 'mono small';
+                    showToast('ok', 'Filled latest ID', `Agreement ID ${latestId}`);
+                } else {
+                    document.getElementById('pay_out').textContent = `Error: Could not determine latest id`;
+                    document.getElementById('pay_out').className = 'mono small error';
+                    showToast('err', 'Load latest failed', 'Could not determine latest id');
+                }
+            } catch (error) {
+                document.getElementById('pay_out').textContent = `Error: ${error.message}`;
+                document.getElementById('pay_out').className = 'mono small error';
+                showToast('err', 'Load latest failed', error.message);
+            }
+        });
+
+        // Pay installment
+        document.getElementById('pay_btn').addEventListener('click', async () => {
+            const id = document.getElementById('agreement_id').value.trim();
+            if (!id) {
+                document.getElementById('pay_out').textContent = 'Error: Please enter an agreement ID';
+                document.getElementById('pay_out').className = 'mono small error';
+                return;
+            }
+            
+            const btn = document.getElementById('pay_btn');
+            setLoading(btn, true);
+            try {
+                const response = await fetch(`${api}/api/agreements/${id}/pay`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const res = await response.json();
+                if (res.success) {
+                    const link = `https://explorer.aptoslabs.com/txn/${res.transaction_hash}?network=devnet`;
+                    document.getElementById('pay_out').textContent = `Success: ${res.message}\nTransaction: ${res.transaction_hash}`;
+                    document.getElementById('pay_out').className = 'mono small success';
+                    showToast('ok', 'Installment paid', `Agreement ${id}`, link);
+                } else {
+                    document.getElementById('pay_out').textContent = `Error: ${res.detail || res.message}`;
+                    document.getElementById('pay_out').className = 'mono small error';
+                    showToast('err', 'Payment failed', res.detail || res.message);
+                }
+            } catch (error) {
+                document.getElementById('pay_out').textContent = `Error: ${error.message}`;
+                document.getElementById('pay_out').className = 'mono small error';
+                showToast('err', 'Payment failed', error.message);
+            } finally {
+                setLoading(btn, false);
+            }
+        });
+    </script>
+</div>
+</body>
+</html>
+

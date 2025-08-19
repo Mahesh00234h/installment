@@ -1,0 +1,11 @@
+[package]
+name = "tuition_escrow_v2"
+version = "1.0.0"
+authors = ["Your Name <your.email@example.com>"]
+upgrade_policy = "compatible"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "main" }
+
+[addresses]
+TuitionEscrow = "0x89019004bafcc06620c787f2d1be274da2c78005102a3a98b1eef112e242911f" 

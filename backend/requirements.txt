@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+aptos-sdk
+requests
+pydantic
